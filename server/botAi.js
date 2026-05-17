@@ -27,7 +27,7 @@ const SKILL_LEVELS = {
     randomActionRate: 0.0,
     lookaheadWeight: 1.5,     // 相手読みを強化
     preservationWeight: 1.2,
-    aggressionBonus: 5,       // 追い込みボーナスを強化
+    aggressionBonus: 3,       // 追い込みボーナス (5 から 3 に緩和。自滅頻度を下げる)
     randomNoise: 0.1,
   },
 };
@@ -126,6 +126,15 @@ function decideBotMove(hand, currentTotal, playerCount, skillKey) {
     return beginnerRandomAction(hand, currentTotal);
   }
 
+  // 手札に減算/スキップ/リターン系のセーフカードがあるか。
+  // 無い時は攻撃を弱める (合計を高く保つと自分のターンで bust 確定するため)。
+  const hasSafetyCard = hand.some(
+    (c) => c.rank === '10' || c.rank === '8' || c.rank === '9' || c.rank === 'Joker'
+  );
+  const effectiveAggression = hasSafetyCard
+    ? skill.aggressionBonus
+    : skill.aggressionBonus * 0.3;
+
   let best = null;
   for (const card of hand) {
     for (const { choice } of enumerateChoices(card)) {
@@ -145,8 +154,9 @@ function decideBotMove(hand, currentTotal, playerCount, skillKey) {
       }
 
       // 1 対 1 アグレッション + スキル別ボーナス
+      // セーフカードが手元に無い時は effectiveAggression が下がり、合計を 90+ まで押し上げる動機を弱める
       if (playerCount && playerCount <= 2 && newTotal >= 90 && newTotal < 101) {
-        s += skill.aggressionBonus;
+        s += effectiveAggression;
       }
 
       if (!best || s > best.score) {
