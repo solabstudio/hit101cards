@@ -305,7 +305,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
         </button>
         <span className="text-green-700">·</span>
         <a
-          href="https://ofuse.me/hit101cards"
+          href="https://ofuse.me/solabstudiojp"
           target="_blank"
           rel="noopener noreferrer"
           className="hover:text-green-300 underline-offset-2 hover:underline transition"
