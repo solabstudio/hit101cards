@@ -36,7 +36,11 @@ export type ShareResult = 'shared' | 'copied' | 'cancelled' | 'failed';
 export async function shareOrCopy(text: string, title?: string): Promise<ShareResult> {
   if (typeof navigator !== 'undefined' && (navigator as any).share) {
     try {
-      await (navigator as any).share({ title, text, url: text });
+      // text と url 両方を渡すと一部のシェア先 (LINE 等) で URL が二重に貼られるため、
+      // URL なら url のみ、それ以外は text のみを渡す。
+      const isUrl = /^https?:\/\//i.test(text);
+      const payload = isUrl ? { title, url: text } : { title, text };
+      await (navigator as any).share(payload);
       return 'shared';
     } catch (err: any) {
       if (err && (err.name === 'AbortError' || err.message === 'Share canceled')) {
