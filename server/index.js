@@ -93,6 +93,15 @@ function buildAdminSnapshot() {
       })),
     });
   }
+  // マッチ妨害カウント (HoldEm 側から逆輸入)
+  const abuseList = [];
+  for (const [uuid, entry] of matchAbuse.entries()) {
+    abuseList.push({
+      uuidPrefix: uuid.slice(0, 8),
+      abortCount: entry.abortCount,
+      bannedUntil: entry.bannedUntil,
+    });
+  }
   const mem = process.memoryUsage();
   return {
     timestamp: new Date().toISOString(),
@@ -106,6 +115,7 @@ function buildAdminSnapshot() {
     },
     summary,
     matchQueue: matchQueue.map(p => ({ name: p.name, uuidPrefix: p.uuid ? p.uuid.slice(0, 8) : null })),
+    matchAbuse: abuseList,
     rooms: roomList,
     players: playerList,
     bannedList,
@@ -122,7 +132,7 @@ function escapeHtml(s) {
 }
 
 function renderAdminHtml(snapshot, token) {
-  const { server: srv, summary, matchQueue: queue, rooms: roomList, players, bannedList, cardUsage, hourly, typeStats, auditTail } = snapshot;
+  const { server: srv, summary, matchQueue: queue, matchAbuse: abuseList = [], rooms: roomList, players, bannedList, cardUsage, hourly, typeStats, auditTail } = snapshot;
   const tokenEnc = encodeURIComponent(token);
   const fmtAge = (sec) => {
     if (sec == null) return '-';
@@ -228,6 +238,16 @@ ${roomList.length ? `<table>
 
 <h2>マッチング待機 (${queue.length})</h2>
 <ul>${queueRows}</ul>
+
+<h2>マッチ妨害カウント (${abuseList.length})</h2>
+${abuseList.length ? `<table>
+<thead><tr><th>UUID</th><th>離脱回数</th><th>BAN 期限</th></tr></thead>
+<tbody>${abuseList.map(a => `<tr>
+  <td><code>${escapeHtml(a.uuidPrefix)}…</code></td>
+  <td>${a.abortCount}</td>
+  <td>${a.bannedUntil ? new Date(a.bannedUntil).toISOString().slice(11,19) + ' まで' : '-'}</td>
+</tr>`).join('')}</tbody>
+</table>` : '<p class="dim">なし</p>'}
 
 <h2>全プレイヤーランキング (${players.length})</h2>
 <table>
