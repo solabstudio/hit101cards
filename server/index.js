@@ -1097,9 +1097,33 @@ io.on('connection', (socket) => {
     const room = rooms.get(roomId);
     if (!room) return cb({ success: false, error: 'ルームが見つかりません' });
     if (room.status !== 'waiting') return cb({ success: false, error: 'ゲームはすでに開始されています' });
-    if (room.players.length >= 6) return cb({ success: false, error: 'ルームが満員です（最大6人）' });
-    if (room.players.find(p => p.name === name)) return cb({ success: false, error: 'その名前はすでに使われています' });
 
+    // 同名プレイヤーが切断中なら席を引き継ぐ (共有リンクから別タブで入り直すケース)
+    const existing = room.players.find(p => p.name === name);
+    if (existing) {
+      if (!existing.disconnected) {
+        return cb({ success: false, error: 'その名前はすでに使われています' });
+      }
+      const timerKey = `${roomId}:${name}`;
+      if (disconnectTimers.has(timerKey)) {
+        clearTimeout(disconnectTimers.get(timerKey));
+        disconnectTimers.delete(timerKey);
+      }
+      const oldId = existing.id;
+      existing.id = socket.id;
+      existing.disconnected = false;
+      if (avatar) existing.avatar = safeAvatar;
+      if (room.hostId === oldId) room.hostId = socket.id;
+      socket.join(roomId);
+      socket.data.roomId = roomId;
+      socket.data.playerName = name;
+      socket.data.uuid = uuid;
+      broadcastToRoom(room);
+      console.log(`席を引き継ぎ: ${name} (${roomId})`);
+      return cb({ success: true, roomId, state: publicState(room, socket.id) });
+    }
+
+    if (room.players.length >= 6) return cb({ success: false, error: 'ルームが満員です（最大6人）' });
     room.players.push({ id: socket.id, name, avatar: safeAvatar, hand: [], lost: false, disconnected: false });
     room.points[name] = 0;
     socket.join(roomId);
@@ -1467,21 +1491,42 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     if (room.status === 'waiting') {
-      // 待機中は即削除
-      room.players = room.players.filter(p => p.id !== socket.id);
-      delete room.points[playerName];
-      // 人間がいなくなったらルーム削除（Botだけで残すと誰も操作できない）
-      const hasHuman = room.players.some(p => !p.isBot);
-      if (!hasHuman) {
-        rooms.delete(roomId);
-        if (botTimers.has(roomId)) { clearTimeout(botTimers.get(roomId)); botTimers.delete(roomId); }
-        return;
-      }
-      if (room.hostId === socket.id) {
-        const nextHost = room.players.find(p => !p.isBot);
-        if (nextHost) room.hostId = nextHost.id;
-      }
+      // 待機中も切断フラグを立てて 60 秒待つ (共有シートで一時的に socket が落ちる
+      // ケースで部屋ごと消えてしまうのを防ぐ)
+      const player = room.players.find(p => p.id === socket.id);
+      if (!player) return;
+      player.disconnected = true;
+      console.log(`切断待機中 (waiting): ${playerName} (${RECONNECT_TIMEOUT_MS / 1000}秒以内に再接続)`);
       broadcastToRoom(room);
+
+      const timerKey = `${roomId}:${playerName}`;
+      if (disconnectTimers.has(timerKey)) clearTimeout(disconnectTimers.get(timerKey));
+      const timer = setTimeout(() => {
+        disconnectTimers.delete(timerKey);
+        const r = rooms.get(roomId);
+        if (!r) return;
+        // 既に再接続してたら何もしない
+        const p = r.players.find(pp => pp.name === playerName);
+        if (!p || !p.disconnected) return;
+        // 完全削除
+        r.players = r.players.filter(pp => pp.id !== p.id);
+        delete r.points[playerName];
+        // 待機中なので脱落ペナルティ等は無し (ゲームが始まってないため)
+        const hasHuman = r.players.some(pp => !pp.isBot);
+        if (!hasHuman) {
+          rooms.delete(roomId);
+          if (botTimers.has(roomId)) { clearTimeout(botTimers.get(roomId)); botTimers.delete(roomId); }
+          console.log(`[cleanup] 待機中の人間が居なくなったため削除: ${roomId}`);
+          return;
+        }
+        if (r.hostId === p.id) {
+          const nextHost = r.players.find(pp => !pp.isBot);
+          if (nextHost) r.hostId = nextHost.id;
+        }
+        broadcastToRoom(r);
+        console.log(`脱落 (waiting タイムアウト): ${playerName}`);
+      }, RECONNECT_TIMEOUT_MS);
+      disconnectTimers.set(timerKey, timer);
     } else {
       // ゲーム中は切断フラグを立てて60秒待つ
       const player = room.players.find(p => p.name === playerName);
