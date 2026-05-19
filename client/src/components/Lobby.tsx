@@ -91,14 +91,9 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative">
-      {/* 装飾: スポットライト風オーラ */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full opacity-25 blur-3xl" style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.5) 0%, transparent 70%)' }} />
-      </div>
-
-      {/* 言語切替 */}
-      <div className="absolute right-3 flex gap-1 text-xs z-10" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
+    <div className="flex flex-col" style={{ minHeight: '100dvh' }}>
+      {/* 言語切替: viewport 固定 (リロード時の高さ揺れに影響されない) */}
+      <div className="fixed right-3 flex gap-1 text-xs z-20" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
         <button
           onClick={() => setLocale('ja')}
           className={`px-2.5 py-1 rounded-lg backdrop-blur-sm ${locale === 'ja' ? 'bg-yellow-500 text-black font-bold' : 'bg-green-800/70 text-green-200'}`}
@@ -108,6 +103,13 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
           className={`px-2.5 py-1 rounded-lg backdrop-blur-sm ${locale === 'en' ? 'bg-yellow-500 text-black font-bold' : 'bg-green-800/70 text-green-200'}`}
         >🇺🇸 EN</button>
       </div>
+
+      {/* メインエリア: flex-1 で残り高さを取る + 内側で中央寄せ */}
+      <main className="flex-1 flex items-center justify-center p-4 relative">
+        {/* 装飾: スポットライト風オーラ */}
+        <div className="pointer-events-none absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full opacity-25 blur-3xl" style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.5) 0%, transparent 70%)' }} />
+        </div>
 
       <div className="bg-green-800 rounded-3xl p-8 shadow-2xl w-full max-w-sm border border-yellow-500/20 relative z-10">
         {/* タイトル */}
@@ -289,12 +291,13 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
           </div>
         )}
 
-      </div>
+        </div>
+      </main>
 
-      {/* フッター: 法的情報リンク + サポート */}
-      <div
-        className="absolute left-0 right-0 flex justify-center gap-4 text-xs text-green-500 flex-wrap px-2"
-        style={{ bottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+      {/* フッター: flex column の自然な末尾 (リロード時の viewport 揺れで隠れない) */}
+      <footer
+        className="flex justify-center gap-4 text-xs text-green-500 flex-wrap px-2 py-3"
+        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
       >
         <button onClick={() => setLegalTab('privacy')} className="hover:text-green-300 underline-offset-2 hover:underline transition">
           {t('lobby.privacy')}
@@ -312,7 +315,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
         >
           {t('lobby.support')}
         </a>
-      </div>
+      </footer>
 
       {/* ルール確認モーダル */}
       {showRules && <RulesModal onClose={() => setShowRules(false)} />}
