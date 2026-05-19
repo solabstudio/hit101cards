@@ -4,8 +4,8 @@
   "description": "合計をピッタリ101にしたら勝ち。無料・登録不要・最大6人対戦のリアルタイムカードゲーム。",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1e293b",
-  "theme_color": "#1e293b",
+  "background_color": "#052e1f",
+  "theme_color": "#052e1f",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
