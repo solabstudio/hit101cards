@@ -91,8 +91,8 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
   }
 
   return (
-    <div className="flex flex-col" style={{ minHeight: '100dvh' }}>
-      {/* 言語切替: viewport 固定 (リロード時の高さ揺れに影響されない) */}
+    <>
+      {/* 言語切替: viewport 固定 */}
       <div className="fixed right-3 flex gap-1 text-xs z-20" style={{ top: 'calc(0.75rem + env(safe-area-inset-top))' }}>
         <button
           onClick={() => setLocale('ja')}
@@ -104,8 +104,14 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
         >🇺🇸 EN</button>
       </div>
 
-      {/* メインエリア: flex-1 で残り高さを取る + 内側で中央寄せ */}
-      <main className="flex-1 flex items-center justify-center p-4 relative">
+      {/* メインエリア: フッター分を空けて中央寄せ。コンテンツがあふれたら自然スクロール */}
+      <main
+        className="flex items-center justify-center p-4 relative"
+        style={{
+          minHeight: '100dvh',
+          paddingBottom: 'calc(3rem + env(safe-area-inset-bottom))',
+        }}
+      >
         {/* 装飾: スポットライト風オーラ */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full opacity-25 blur-3xl" style={{ background: 'radial-gradient(circle, rgba(250,204,21,0.5) 0%, transparent 70%)' }} />
@@ -294,10 +300,10 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
         </div>
       </main>
 
-      {/* フッター: flex column の自然な末尾 (リロード時の viewport 揺れで隠れない) */}
+      {/* フッター: viewport 底に画びょう留め (position: fixed) */}
       <footer
-        className="flex justify-center gap-4 text-xs text-green-500 flex-wrap px-2 py-3"
-        style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+        className="fixed bottom-0 left-0 right-0 z-10 flex justify-center gap-4 text-xs text-green-500 flex-wrap px-2 bg-gradient-to-t from-[#052e1f] via-[#052e1f]/95 to-transparent pt-4 pb-2"
+        style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))' }}
       >
         <button onClick={() => setLegalTab('privacy')} className="hover:text-green-300 underline-offset-2 hover:underline transition">
           {t('lobby.privacy')}
@@ -325,7 +331,7 @@ export default function Lobby({ onCreateRoom, onJoinRoom, onJoinMatchmaking, err
 
       {/* 初回ウェルカムモーダル */}
       {showWelcome && <WelcomeModal onClose={dismissWelcome} />}
-    </div>
+    </>
   );
 }
 
